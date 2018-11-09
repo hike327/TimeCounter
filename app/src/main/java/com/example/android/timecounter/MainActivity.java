@@ -14,17 +14,20 @@ import android.widget.VideoView;
 public class MainActivity extends AppCompatActivity {
 
     int timerSec;
-    TextView timerOut;
-    SeekBar timerSeekBar;
+    int timerMemory;
     boolean inProgress = false;
     boolean firstTouch = true;
-    CountDownTimer countDownTimer;
+    boolean lastTouch = false;
+
     Button mainButton;
     Button resetButton;
     Button minPlus;
     Button minMinus;
     Button secPlus;
     Button secMinus;
+    TextView timerOut;
+    SeekBar timerSeekBar;
+    CountDownTimer countDownTimer;
 
 
     @Override
@@ -32,19 +35,28 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        timerSec = 30;
-        timerOut = (TextView) findViewById(R.id.timerTextView);
-        timerSeekBar = (SeekBar) findViewById(R.id.timerSeekBar);
-        timerSeekBar.setMax(timerSec);
-        timerSeekBar.setProgress(timerSec);
-        mainButton = (Button) findViewById(R.id.mainButton);
-        resetButton = (Button) findViewById(R.id.resetButton);
-        resetButton.setVisibility(View.INVISIBLE);
-        minPlus = (Button) findViewById(R.id.minutePlusButton);
+        timerOut = (TextView)findViewById(R.id.timerTextView);
+        timerSeekBar = (SeekBar)findViewById(R.id.timerSeekBar);
+        mainButton = (Button)findViewById(R.id.mainButton);
+        resetButton = (Button)findViewById(R.id.resetButton);
+        minPlus = (Button)findViewById(R.id.minutePlusButton);
         minMinus = (Button)findViewById(R.id.minuteMinusButton);
         secPlus = (Button)findViewById(R.id.secondPlusButton);
         secMinus = (Button)findViewById(R.id.secondMinusButton);
 
+        resetCounter();
+
+    }
+
+    public void resetCounter(){
+
+        inProgress = false;
+        firstTouch = true;
+        lastTouch = false;
+        timerSeekBar.setMax(30);
+        setTimer(30);
+
+        resetButton.setVisibility(View.INVISIBLE);
     }
 
     public void setTimer(int newTime){
@@ -66,73 +78,75 @@ public class MainActivity extends AppCompatActivity {
         }
 
         timerOut.setText( minutesOut + ":" + secondsOut);
-
+        timerSeekBar.setProgress(timerSec);
     }
 
     public void munitesPlus(View view){
         if (timerSec <= 1740) {
+            timerSeekBar.setMax(timerSec + 60);
             setTimer(timerSec + 60);
         } else {
             Toast.makeText(getApplicationContext(),"You can't set time more than 30 minutes",Toast.LENGTH_SHORT).show();
         }
-        timerSeekBar.setMax(timerSec);
-        timerSeekBar.setProgress(timerSec);
     }
     public void munitesMinus(View view){
         if (timerSec >= 60) {
+            timerSeekBar.setMax(timerSec - 60);
             setTimer(timerSec - 60);
         } else {
             Toast.makeText(getApplicationContext(),"You can't set negative time",Toast.LENGTH_SHORT).show();
         }
-        timerSeekBar.setMax(timerSec);
-        timerSeekBar.setProgress(timerSec);
     }
     public void secondsPlus(View view){
         if (timerSec <= 1799) {
+            timerSeekBar.setMax(timerSec + 1);
             setTimer(timerSec+1);
         } else {
             Toast.makeText(getApplicationContext(),"You can't set time more than 30 minutes",Toast.LENGTH_SHORT).show();
         }
-        timerSeekBar.setMax(timerSec);
-        timerSeekBar.setProgress(timerSec);
     }
     public void secondsMinus(View view){
         if (timerSec >= 1) {
+            timerSeekBar.setMax(timerSec - 1);
             setTimer(timerSec - 1);
         } else {
             Toast.makeText(getApplicationContext(),"You can't set negative time",Toast.LENGTH_SHORT).show();
         }
-        timerSeekBar.setMax(timerSec);
-        timerSeekBar.setProgress(timerSec);
     }
 
     public void mainButton(View view) {
 
-        resetButton.setVisibility(View.VISIBLE);
-
         if (firstTouch) {
-
+            timerMemory = timerSec;
             firstTouch = false;
             inProgress = true;
-            mainButton.setText("Stop");
+            mainButton.setText("Pause");
             minMinus.setEnabled(false);
             minPlus.setEnabled(false);
             secMinus.setEnabled(false);
             secPlus.setEnabled(false);
             setCountDownTimer();
             countDownTimer.start();
+        } else if (lastTouch) {
+            lastTouch = false;
+            resetButton.setVisibility(View.INVISIBLE);
+            setTimer(timerMemory);
+            mainButton.setText("Pause");
+            setCountDownTimer();
+            countDownTimer.start();
         } else {
             if (inProgress) {
-
+                resetButton.setVisibility(View.VISIBLE);
                 inProgress=false;
                 countDownTimer.cancel();
                 setCountDownTimer();
                 mainButton.setText("Resume");
 
             } else {
+                resetButton.setVisibility(View.INVISIBLE);
                 inProgress=true;
                 countDownTimer.start();
-                mainButton.setText("Stop");
+                mainButton.setText("Pause");
             }
         }
     }
@@ -140,12 +154,7 @@ public class MainActivity extends AppCompatActivity {
     public void resetAll(View view){
 
         countDownTimer.cancel();
-        timerSec = 30;
-        timerSeekBar.setMax(timerSec);
-        timerSeekBar.setProgress(timerSec);
-        setTimer(timerSec);
-        inProgress = false;
-        firstTouch = true;
+        resetCounter();
         mainButton.setText("Go!");
         resetButton.setVisibility(View.INVISIBLE);
         minMinus.setEnabled(true);
@@ -156,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setCountDownTimer(){
-        countDownTimer = new CountDownTimer(timerSec * 1000, 1000) {
+        countDownTimer = new CountDownTimer(timerSec * 1000 + 100, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
                 setTimer((int) millisUntilFinished / 1000);
@@ -167,9 +176,11 @@ public class MainActivity extends AppCompatActivity {
             public void onFinish() {
                 setTimer(0);
                 timerSeekBar.setProgress(0);
-                mainButton.setEnabled(false);
                 MediaPlayer mediaPlayer = MediaPlayer.create(getApplicationContext(),R.raw.foghorn);
                 mediaPlayer.start();
+                lastTouch=true;
+                mainButton.setText("REPEAT");
+                resetButton.setVisibility(View.VISIBLE);
             }
         };
     }
